@@ -60,6 +60,7 @@ export const initWithPassword = async (params) => {
     throw new Error('Error decrypting vault key')
   }
 
+  await pearpassVaultClient.resetFailedAttempts()
   await pearpassVaultClient.vaultsInit(decryptVaultKeyRes)
 
   return true
