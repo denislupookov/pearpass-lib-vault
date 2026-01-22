@@ -11,56 +11,6 @@ export const initWithPassword = async (params) => {
     throw new Error('Password is required')
   }
 
-  const password = params.password
-
-  const res = await pearpassVaultClient.vaultsGetStatus()
-
-  if (res?.status) {
-    const masterEncryptionGetRes =
-      await pearpassVaultClient.vaultsGet('masterEncryption')
-
-    const hashedPassword = await pearpassVaultClient.getDecryptionKey({
-      salt: masterEncryptionGetRes.salt,
-      password
-    })
-
-    if (masterEncryptionGetRes.hashedPassword !== hashedPassword) {
-      throw new Error(
-        'Provided credentials do not match existing master encryption'
-      )
-    }
-
-    return true
-  }
-
-  const statusRes = await pearpassVaultClient.encryptionGetStatus()
-
-  if (!statusRes?.status) {
-    await pearpassVaultClient.encryptionInit()
-  }
-
-  const encryptionGetRes =
-    await pearpassVaultClient.encryptionGet('masterPassword')
-
-  const { ciphertext, nonce, salt } = encryptionGetRes
-
-  const hashedPassword = await pearpassVaultClient.getDecryptionKey({
-    salt,
-    password
-  })
-
-  const decryptVaultKeyRes = await pearpassVaultClient.decryptVaultKey({
-    ciphertext,
-    nonce,
-    hashedPassword
-  })
-
-  if (!decryptVaultKeyRes) {
-    await pearpassVaultClient.recordFailedMasterPassword()
-    throw new Error('Error decrypting vault key')
-  }
-
-  await pearpassVaultClient.vaultsInit(decryptVaultKeyRes)
-
+  await pearpassVaultClient.initWithPassword(params.password)
   return true
 }
