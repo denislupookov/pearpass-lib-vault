@@ -27,7 +27,7 @@ export const usePair = () => {
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(
           () => reject(new Error('Request timed out')),
-          MS_PER_SECOND * 10
+          MS_PER_SECOND * 30
         )
       )
 
