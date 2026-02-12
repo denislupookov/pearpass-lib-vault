@@ -62,8 +62,11 @@ export const useVault = ({ variables } = {}) => {
 
     await initListener({
       vaultId: vaultId,
-      onUpdate: () => {
-        dispatch(getVaultById({ vaultId }))
+      onUpdate: async () => {
+        const current = await getCurrentVault()
+        if (current) {
+          dispatch(getVaultById({ vaultId: current.id }))
+        }
       }
     })
 
