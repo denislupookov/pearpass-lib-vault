@@ -15,8 +15,14 @@ export const queueAction = async (
   targetDeviceId,
   { type, actor, payload } = {}
 ) => {
-  if (!targetDeviceId || !type || !actor) {
-    throw new Error('queueAction: targetDeviceId, type and actor are required')
+  if (!targetDeviceId) {
+    throw new Error('queueAction: targetDeviceId is required')
+  }
+  if (!type) {
+    throw new Error('queueAction: type is required')
+  }
+  if (!actor) {
+    throw new Error('queueAction: actor is required')
   }
 
   const now = Date.now()

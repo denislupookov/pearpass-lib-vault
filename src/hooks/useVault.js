@@ -88,11 +88,11 @@ export const useVault = ({ variables } = {}) => {
         if (current) {
           dispatch(getVaultById({ vaultId: current.id }))
         }
-        runActionScan()
+        runActionScan().catch((err) => logger.error('runActionScan failed', { err }))
       }
     })
 
-    runActionScan()
+    runActionScan().catch((err) => logger.error('runActionScan failed', { err }))
 
     return vault
   }

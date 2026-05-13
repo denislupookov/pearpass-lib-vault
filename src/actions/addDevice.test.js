@@ -2,7 +2,7 @@ import { generateUniqueId } from '@tetherto/pear-apps-utils-generate-unique-id'
 
 import { addDevice } from './addDevice'
 import { addDevice as addDeviceApi } from '../api/addDevice'
-import { setCurrentDeviceName, pearpassVaultClient } from '../instances'
+import { setPearpassVaultClient, pearpassVaultClient } from '../instances'
 import { validateAndPrepareDevice } from '../utils/validateAndPrepareDevice'
 
 jest.mock('../api/addDevice', () => ({
@@ -33,7 +33,7 @@ describe('addDevice', () => {
     global.Date.now = jest.fn().mockReturnValue(mockDate)
 
     generateUniqueId.mockReturnValue(mockDeviceId)
-    setCurrentDeviceName(mockDeviceName)
+    setPearpassVaultClient(pearpassVaultClient, { currentDeviceName: mockDeviceName })
     pearpassVaultClient.activeVaultGetWriterKey.mockResolvedValue(mockWriterKey)
 
     dispatch = jest.fn()

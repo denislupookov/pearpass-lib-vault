@@ -20,9 +20,6 @@ export { VaultProvider } from './store'
 export { closeAllInstances } from './api/closeAllInstances'
 export {
   setPearpassVaultClient,
-  setCurrentDeviceName,
-  getCurrentDeviceName,
-  clearCurrentDeviceName,
   setStoragePath
 } from './instances'
 
@@ -55,3 +52,6 @@ export { formatOtpCode } from './utils/formatOtpCode'
 export { createAlignedInterval } from './utils/createAlignedInterval'
 export { isExpiring, EXPIRY_THRESHOLD_SECONDS } from './utils/otpExpiry'
 export { groupOtpRecords } from './utils/groupOtpRecords'
+export { parseOtpInput } from './utils/parseOtpInput'
+export { matchLoginRecords } from './utils/matchLoginRecords'
+export { extractDomainName } from './utils/extractDomainName'

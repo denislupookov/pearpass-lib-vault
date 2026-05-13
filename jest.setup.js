@@ -40,7 +40,7 @@ const mockClient = {
   activeVaultGetWriterKey: jest.fn().mockResolvedValue('writer-key-hex')
 }
 
-setPearpassVaultClient(mockClient)
+setPearpassVaultClient(mockClient, { currentDeviceName: null })
 
 global.pearpassVaultClient = mockClient
 

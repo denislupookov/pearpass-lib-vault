@@ -3,31 +3,18 @@ export let pearpassVaultClient
 let _currentDeviceName = null
 
 /**
- * @param {{
- *   activeVaultGetWriterKey: () => Promise<string | null>,
- *   activeVaultFind: (range: { gte: { key: string }, lt: { key: string } }) => Promise<Array<{ key: string, value: unknown }> | null>,
- *   activeVaultRemove: (key: string) => Promise<void>
- * }} instance
+ * @param {object} instance
+ * @param {{ currentDeviceName: string }} options
  */
-export const setPearpassVaultClient = (instance) => {
+export const setPearpassVaultClient = (instance, { currentDeviceName } = {}) => {
   pearpassVaultClient = instance
-}
-
-/**
- * @param {string} name
- */
-export const setCurrentDeviceName = (name) => {
-  _currentDeviceName = name
+  _currentDeviceName = currentDeviceName ?? null
 }
 
 /**
  * @returns {string | null}
  */
 export const getCurrentDeviceName = () => _currentDeviceName
-
-export const clearCurrentDeviceName = () => {
-  _currentDeviceName = null
-}
 
 /**
  * @param {string} path

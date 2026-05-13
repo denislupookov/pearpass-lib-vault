@@ -26,12 +26,12 @@ export declare const ACTIONS: Record<
 
 export declare function queueAction(
   targetDeviceId: string,
-  action: { type: string; actor: string; payload?: unknown }
+  action: { type: string; actor: string; payload?: any }
 ): Promise<{ timestamp: string; actionId: string; key: string }>
 
 export declare function broadcastAction(action: {
   type: string
-  payload?: unknown
+  payload?: any
 }): Promise<
   Array<{
     targetDeviceId: string
@@ -46,9 +46,3 @@ export declare function processPendingActions(): Promise<void>
 export declare function runActionScan(): Promise<void>
 
 export declare function getMyDeviceId(): Promise<string | null>
-
-export declare function setCurrentDeviceName(name: string): void
-
-export declare function getCurrentDeviceName(): string | null
-
-export declare function clearCurrentDeviceName(): void

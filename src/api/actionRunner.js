@@ -1,4 +1,5 @@
 import { processPendingActions } from './processPendingActions'
+import { logger } from '../utils/logger'
 
 let isProcessing = false
 let pendingRescan = false
@@ -16,7 +17,11 @@ export const runActionScan = async () => {
   try {
     do {
       pendingRescan = false
-      await processPendingActions()
+      try {
+        await processPendingActions()
+      } catch (err) {
+        logger.error('runActionScan: processPendingActions failed', err)
+      }
     } while (pendingRescan)
   } finally {
     isProcessing = false
