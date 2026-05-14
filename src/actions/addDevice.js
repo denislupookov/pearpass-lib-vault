@@ -15,28 +15,43 @@ export const addDevice = createAsyncThunk(
 
     const deviceName = getCurrentDeviceName()
     const writerKey = await pearpassVaultClient.activeVaultGetWriterKey()
+    const masterTopic = await safeGetPersonalSwarmTopic()
 
     const existingDevice = existingDevices.find(
       (device) => device.name === deviceName
     )
 
-    if (existingDevice && existingDevice.writerKey === writerKey) {
+    if (
+      existingDevice &&
+      existingDevice.writerKey === writerKey &&
+      existingDevice.masterTopic === masterTopic
+    ) {
       logger.log('Device already added to vault')
       return existingDevice
     }
 
-    // Either no entry, or the existing entry has a stale writerKey (typically
-    // a reinstall on the same device — the local Corestore keypair was
-    // regenerated, so autopass now writes under a new writerKey). Reuse the
-    // existing id when present so we overwrite device/<id> in place rather
-    // than leaving a duplicate-by-name entry that getMyDeviceId can't match
-    // by writerKey.
-    const device = existingDevice
+    const base = existingDevice
       ? { ...existingDevice, writerKey, createdAt: Date.now() }
-      : addDeviceFactory(deviceName, vaultId, writerKey)
+      : addDeviceFactory(deviceName, vaultId, writerKey, masterTopic)
+
+    const device = { ...base }
+    if (masterTopic) device.masterTopic = masterTopic
+    else delete device.masterTopic
 
     await addDeviceApi(device)
 
     return device
   }
 )
+
+const safeGetPersonalSwarmTopic = async () => {
+  try {
+    if (typeof pearpassVaultClient?.personalSwarmGetTopic !== 'function') {
+      return null
+    }
+    return (await pearpassVaultClient.personalSwarmGetTopic()) || null
+  } catch (err) {
+    logger.error('addDevice: personalSwarmGetTopic failed', { err })
+    return null
+  }
+}

@@ -6,9 +6,15 @@ import { validateAndPrepareDevice } from './validateAndPrepareDevice'
  * @param {string} deviceName - device name (e.g. `Platform.OS + ' ' + Platform.Version`)
  * @param {string} vaultId
  * @param {string} writerKey - the autobase writer key for this device on this vault
+ * @param {string} [masterTopic] - hex-encoded personal swarm topic for this device
  * @returns {Object}
  */
-export const addDeviceFactory = (deviceName, vaultId, writerKey) => {
+export const addDeviceFactory = (
+  deviceName,
+  vaultId,
+  writerKey,
+  masterTopic
+) => {
   if (!deviceName || !vaultId || !writerKey) {
     throw new Error('deviceName, vaultId and writerKey are required')
   }
@@ -20,6 +26,7 @@ export const addDeviceFactory = (deviceName, vaultId, writerKey) => {
     writerKey,
     createdAt: Date.now()
   }
+  if (masterTopic) device.masterTopic = masterTopic
 
   return validateAndPrepareDevice(device)
 }
