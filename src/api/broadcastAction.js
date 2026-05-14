@@ -1,6 +1,7 @@
 import { listDevices } from './listDevices'
 import { queueAction } from './queueAction'
 import { getMyDeviceId } from '../utils/getMyDeviceId'
+import { logger } from '../utils/logger'
 import { ACTION_TYPES } from '../actions'
 
 /**
@@ -8,12 +9,18 @@ import { ACTION_TYPES } from '../actions'
  *   type: string,
  *   payload?: any
  * }} action
- * @returns {Promise<Array<{
- *   targetDeviceId: string,
- *   timestamp: string,
- *   actionId: string,
- *   key: string
- * }>>}
+ * @returns {Promise<{
+ *   results: Array<{
+ *     targetDeviceId: string,
+ *     timestamp: string,
+ *     actionId: string,
+ *     key: string
+ *   }>,
+ *   failures: Array<{
+ *     targetDeviceId: string,
+ *     error: Error
+ *   }>
+ * }>}
  */
 export const broadcastAction = async ({ type, payload } = {}) => {
   if (!type) {
@@ -32,14 +39,26 @@ export const broadcastAction = async ({ type, payload } = {}) => {
   const devices = (await listDevices()) ?? []
   const others = devices.filter((d) => d?.id && d.id !== myDeviceId)
 
+  const settled = await Promise.allSettled(
+    others.map((target) =>
+      queueAction(target.id, { type, payload, actor: myDeviceId }).then(
+        (result) => ({ targetDeviceId: target.id, ...result })
+      )
+    )
+  )
+
   const results = []
-  for (const target of others) {
-    const result = await queueAction(target.id, {
-      type,
-      payload,
-      actor: myDeviceId
-    })
-    results.push({ targetDeviceId: target.id, ...result })
+  const failures = []
+  settled.forEach((entry, i) => {
+    if (entry.status === 'fulfilled') {
+      results.push(entry.value)
+    } else {
+      failures.push({ targetDeviceId: others[i].id, error: entry.reason })
+    }
+  })
+
+  if (failures.length) {
+    logger.error('broadcastAction: partial failures', { type, failures })
   }
 
   return results

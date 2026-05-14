@@ -29,7 +29,11 @@ export const processPendingActions = async () => {
       await handler.execute(entry.value)
       await pearpassVaultClient.activeVaultRemove(entry.key)
     } catch (err) {
-      logger.error('Failed to process pending action', { type: entry?.value?.type, err })
+      logger.error('Failed to process pending action', {
+        key: entry?.key,
+        type: entry?.value?.type,
+        err
+      })
     }
   }
 }
