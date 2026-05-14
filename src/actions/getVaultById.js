@@ -2,6 +2,7 @@ import { createAsyncThunk } from '@reduxjs/toolkit'
 
 import { addDevice as addDeviceApi } from '../api/addDevice'
 import { getVaultById as getVaultByIdApi } from '../api/getVaultById'
+import { registerPeer } from '../api/inbox'
 import { listDevices } from '../api/listDevices'
 import { listRecords } from '../api/listRecords'
 import { getCurrentDeviceName, pearpassVaultClient } from '../instances'
@@ -24,6 +25,7 @@ export const getVaultById = createAsyncThunk(
     const devices = (await listDevices(vault.id)) ?? []
 
     const healedDevices = await healLocalDeviceEntry(devices)
+    await Promise.all(healedDevices.map(registerPeer))
 
     return {
       ...vault,
