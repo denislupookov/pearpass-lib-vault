@@ -4,6 +4,7 @@ import { ACTIONS } from '../actions'
 import { pearpassVaultClient } from '../instances'
 import { decodeEnvelope } from './broadcastAction'
 import { listDevices } from './listDevices'
+import { getMyDeviceId } from '../utils/getMyDeviceId'
 import { logger } from '../utils/logger'
 
 const INBOX_PREFIX = 'actions/inbox/'
@@ -18,6 +19,11 @@ export const acceptInboundEnvelope = async ({ envelope, peerInfo } = {}) => {
   const decoded = await decodeEnvelope(envelope, { verify: true })
   if (!decoded || !decoded.type) {
     logger.error('inbox: dropped malformed or unsigned envelope', { peerInfo })
+    return
+  }
+
+  const myDeviceId = await getMyDeviceId().catch(() => null)
+  if (myDeviceId && decoded.actor === myDeviceId) {
     return
   }
 
