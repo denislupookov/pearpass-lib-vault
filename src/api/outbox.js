@@ -4,8 +4,10 @@ import { pearpassVaultClient } from '../instances'
 import { encodeEnvelope, decodeEnvelope } from './broadcastAction'
 
 const OUTBOX_PREFIX = 'actions/outbox/'
-const MAX_ATTEMPTS = 50
-const GRACE_MS = 7 * 24 * 60 * 60 * 1000
+const FAST_PHASE_MS = 7 * 24 * 60 * 60 * 1000
+const GRACE_MS = 30 * 24 * 60 * 60 * 1000
+const FAST_RETRY_MS = 60 * 1000
+const SLOW_RETRY_MS = 60 * 60 * 1000
 
 /**
  * @param {{ targetDeviceId: string, targetTopic: string, envelopeBase: Object }} entry
@@ -66,10 +68,7 @@ export const processOutbox = async () => {
     const record = entry?.value
     if (!record) continue
 
-    if (
-      record.attempts >= MAX_ATTEMPTS ||
-      now - (record.firstTry ?? now) > GRACE_MS
-    ) {
+    if (now - (record.firstTry ?? now) > GRACE_MS) {
       await pearpassVaultClient.vaultsRemove(entry.key)
       dropped += 1
       continue
@@ -102,20 +101,19 @@ export const processOutbox = async () => {
 const FIRST_RETRY_MS = 3_000
 const FIRST_RETRY_JITTER_MS = 2_000
 
+// First failure retries after 3-5s. After that, steady 1m for the first 7
+// days, then slow to 1h until the 30-day grace window drops the entry.
 const bumpEntry = async (key, record, now) => {
   const attempts = (record.attempts ?? 0) + 1
-  const nextRetry =
+  const age = now - (record.firstTry ?? now)
+  const delay =
     attempts === 1
-      ? now + FIRST_RETRY_MS + Math.floor(Math.random() * FIRST_RETRY_JITTER_MS)
-      : now + backoffMs(attempts - 1)
-  const next = { ...record, attempts, nextRetry }
+      ? FIRST_RETRY_MS + Math.floor(Math.random() * FIRST_RETRY_JITTER_MS)
+      : age < FAST_PHASE_MS
+        ? FAST_RETRY_MS
+        : SLOW_RETRY_MS
+  const next = { ...record, attempts, nextRetry: now + delay }
   await pearpassVaultClient.vaultsAdd(key, next)
-}
-
-const backoffMs = (attempts) => {
-  const base = 60 * 1000
-  const max = 60 * 60 * 1000
-  return Math.min(base * 2 ** attempts, max)
 }
 
 const nextPrefix = (prefix) => {
