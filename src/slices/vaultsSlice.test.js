@@ -14,6 +14,13 @@ jest.mock('../actions/createVault', () => ({
     rejected: { type: 'createVault/rejected' }
   }
 }))
+jest.mock('../actions/deleteVaultLocal', () => ({
+  deleteVaultLocal: {
+    pending: { type: 'deleteVaultLocal/pending' },
+    fulfilled: { type: 'deleteVaultLocal/fulfilled' },
+    rejected: { type: 'deleteVaultLocal/rejected' }
+  }
+}))
 jest.mock('../actions/getVaults', () => ({
   getVaults: {
     pending: { type: 'getVaults/pending' },

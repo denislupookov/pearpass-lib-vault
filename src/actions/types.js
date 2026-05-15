@@ -1,3 +1,4 @@
 export const ACTION_TYPES = {
-  DELETE_VAULT: 'delete-vault'
+  DELETE_VAULT: 'delete-vault',
+  LEAVE_VAULT: 'leave-vault'
 }
