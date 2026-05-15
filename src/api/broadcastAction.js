@@ -1,3 +1,5 @@
+import { generateUniqueId } from '@tetherto/pear-apps-utils-generate-unique-id'
+
 import { ACTION_TYPES } from '../actions'
 import { pearpassVaultClient } from '../instances'
 import { listDevices } from './listDevices'
@@ -33,17 +35,19 @@ export const broadcastAction = async ({ type, payload } = {}) => {
   const devices = (await listDevices()) ?? []
   const others = devices.filter((d) => d?.id && d.id !== myDeviceId)
 
-  const envelopeBase = {
-    type,
-    payload,
-    actor: myDeviceId,
-    sentAt: new Date().toISOString()
-  }
-
   const results = []
   const failures = []
 
   for (const target of others) {
+    // Per-target id, frozen at append time so signed retries match and the
+    // receiver can dedupe replays on (actor, id).
+    const envelopeBase = {
+      id: generateUniqueId(),
+      type,
+      payload,
+      actor: myDeviceId,
+      sentAt: new Date().toISOString()
+    }
     try {
       await outboxAppend({
         targetDeviceId: target.id,

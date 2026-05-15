@@ -8,6 +8,8 @@ import { getMyDeviceId } from '../utils/getMyDeviceId'
 import { logger } from '../utils/logger'
 
 const INBOX_PREFIX = 'actions/inbox/'
+const SEEN_PREFIX = 'actions/seen/'
+const SEEN_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 /**
  * @param {{ envelope: string }} message
@@ -27,15 +29,48 @@ export const acceptInboundEnvelope = async ({ envelope } = {}) => {
     return
   }
 
+  if (await isSeen(decoded.actor, decoded.id)) {
+    return
+  }
+
   const id = generateUniqueId()
   const ts = Date.now()
-  const key = `${INBOX_PREFIX}${ts}_${id}`
+  // Pad to a fixed width so lexicographic iteration matches arrival order
+  // even for envelopes that land in the same ms. 13 digits covers Date.now()
+  // through year 2286.
+  const key = `${INBOX_PREFIX}${String(ts).padStart(13, '0')}_${id}`
   const record = { id, receivedAt: ts, envelope: decoded }
 
   try {
     await pearpassVaultClient.vaultsAdd(key, record)
+    await markSeen(decoded.actor, decoded.id)
   } catch (err) {
     logger.error('inbox: failed to persist envelope', { err })
+  }
+}
+
+const seenKey = (actor, envelopeId) => `${SEEN_PREFIX}${actor}/${envelopeId}`
+
+const isSeen = async (actor, envelopeId) => {
+  if (!actor || !envelopeId) return false
+  try {
+    const entry = await pearpassVaultClient?.vaultsGet?.(
+      seenKey(actor, envelopeId)
+    )
+    return !!entry
+  } catch {
+    return false
+  }
+}
+
+const markSeen = async (actor, envelopeId) => {
+  if (!actor || !envelopeId) return
+  try {
+    await pearpassVaultClient.vaultsAdd(seenKey(actor, envelopeId), {
+      seenAt: Date.now()
+    })
+  } catch (err) {
+    logger.error('inbox: failed to mark seen', { err })
   }
 }
 
@@ -114,7 +149,29 @@ export const processInbox = async () => {
     }
   }
 
+  await pruneSeen()
+
   return { processed, skipped, deferred, failed, quarantined }
+}
+
+const pruneSeen = async () => {
+  if (typeof pearpassVaultClient?.vaultsFind !== 'function') return
+  let entries
+  try {
+    entries =
+      (await pearpassVaultClient.vaultsFind({
+        gte: { key: SEEN_PREFIX },
+        lt: { key: nextPrefix(SEEN_PREFIX) }
+      })) ?? []
+  } catch {
+    return
+  }
+  const cutoff = Date.now() - SEEN_TTL_MS
+  for (const entry of entries) {
+    if ((entry?.value?.seenAt ?? 0) < cutoff) {
+      await pearpassVaultClient.vaultsRemove(entry.key).catch(() => {})
+    }
+  }
 }
 
 const quarantineEntry = async (key, record, err) => {
@@ -167,4 +224,9 @@ export const registerPeer = async (device) => {
   }
 }
 
-export { INBOX_PREFIX, INBOX_QUARANTINE_PREFIX, INBOX_MAX_ATTEMPTS }
+export {
+  INBOX_PREFIX,
+  INBOX_QUARANTINE_PREFIX,
+  INBOX_MAX_ATTEMPTS,
+  SEEN_PREFIX
+}
