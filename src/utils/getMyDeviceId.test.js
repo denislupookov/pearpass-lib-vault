@@ -19,7 +19,9 @@ describe('getMyDeviceId', () => {
     })
 
     it('writerKey match wins even if a different name-only record matches the singleton', async () => {
-      setPearpassVaultClient(pearpassVaultClient, { currentDeviceName: 'ios 18.0' })
+      setPearpassVaultClient(pearpassVaultClient, {
+        currentDeviceName: 'ios 18.0'
+      })
       pearpassVaultClient.activeVaultGetWriterKey.mockResolvedValue('w-bbb')
       pearpassVaultClient.activeVaultList.mockResolvedValue([
         { id: 'OLD', name: 'ios 18.0' },
@@ -31,7 +33,9 @@ describe('getMyDeviceId', () => {
 
   describe('legacy fallback (name match via singleton)', () => {
     it('returns the legacy record id when writerKey does not match and singleton name does', async () => {
-      setPearpassVaultClient(pearpassVaultClient, { currentDeviceName: 'ios 18.0' })
+      setPearpassVaultClient(pearpassVaultClient, {
+        currentDeviceName: 'ios 18.0'
+      })
       pearpassVaultClient.activeVaultGetWriterKey.mockResolvedValue('w-bbb')
       pearpassVaultClient.activeVaultList.mockResolvedValue([
         { id: 'OLD', name: 'ios 18.0' }
@@ -39,13 +43,32 @@ describe('getMyDeviceId', () => {
       expect(await getMyDeviceId()).toBe('OLD')
     })
 
-    it('only matches legacy records (no writerKey on record)', async () => {
-      setPearpassVaultClient(pearpassVaultClient, { currentDeviceName: 'ios 18.0' })
+    it('matches by name even when the record has a stale writerKey', async () => {
+      // Covers reinstall drift: this device used to be writerKey 'w-other',
+      // wrote that into the vault, then reinstalled and now its local
+      // autopass is 'w-bbb'. The vault record is stale until addDevice
+      // self-heals it. byName fallback must still resolve to that record so
+      // the device can identify itself in the meantime.
+      setPearpassVaultClient(pearpassVaultClient, {
+        currentDeviceName: 'ios 18.0'
+      })
       pearpassVaultClient.activeVaultGetWriterKey.mockResolvedValue('w-bbb')
       pearpassVaultClient.activeVaultList.mockResolvedValue([
-        { id: 'OTHER', name: 'ios 18.0', writerKey: 'w-other' }
+        { id: 'STALE', name: 'ios 18.0', writerKey: 'w-other' }
       ])
-      expect(await getMyDeviceId()).toBeNull()
+      expect(await getMyDeviceId()).toBe('STALE')
+    })
+
+    it('prefers the most-recently-created record when multiple share a name', async () => {
+      setPearpassVaultClient(pearpassVaultClient, {
+        currentDeviceName: 'ios 18.0'
+      })
+      pearpassVaultClient.activeVaultGetWriterKey.mockResolvedValue('w-bbb')
+      pearpassVaultClient.activeVaultList.mockResolvedValue([
+        { id: 'OLDER', name: 'ios 18.0', createdAt: 100 },
+        { id: 'NEWER', name: 'ios 18.0', writerKey: 'w-other', createdAt: 200 }
+      ])
+      expect(await getMyDeviceId()).toBe('NEWER')
     })
 
     it('returns null when no singleton deviceName is set', async () => {

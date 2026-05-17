@@ -7,6 +7,7 @@ import { createRecord } from '../actions/createRecord'
 import { createVault } from '../actions/createVault'
 import { deleteFolder } from '../actions/deleteFolder'
 import { deleteRecords } from '../actions/deleteRecords'
+import { deleteVaultLocal } from '../actions/deleteVaultLocal'
 import { getVaultById } from '../actions/getVaultById'
 import { renameFolder } from '../actions/renameFolder'
 import { resetState } from '../actions/resetState'
@@ -177,11 +178,24 @@ export const vaultSlice = createSlice({
       .addCase(addDevice.fulfilled, (state, action) => {
         state.isDeviceLoading = false
 
-        const currentDevices = state.data?.devices ?? []
+        const newDevice = action?.payload
+        if (!newDevice) return
 
-        state.data.devices = action?.payload
-          ? [...currentDevices, action.payload]
-          : currentDevices
+        const currentDevices = state.data?.devices ?? []
+        const existingIndex = currentDevices.findIndex(
+          (device) => device.id === newDevice.id
+        )
+
+        // addDevice self-heals stale entries by reusing the existing id, so
+        // we replace-by-id rather than append. Pure adds (no existing match)
+        // still append as before.
+        if (existingIndex === -1) {
+          state.data.devices = [...currentDevices, newDevice]
+        } else {
+          const updated = [...currentDevices]
+          updated[existingIndex] = newDevice
+          state.data.devices = updated
+        }
       })
       .addCase(addDevice.rejected, (state, action) => {
         logger.error(`Action addDevice error:`, JSON.stringify(action.error))
@@ -223,6 +237,13 @@ export const vaultSlice = createSlice({
         state.isLoading = false
         state.error = action.error
       })
+
+    builder.addCase(deleteVaultLocal.fulfilled, (state, action) => {
+      if (state.data?.id === action.payload.vaultId) {
+        state.data = initialState.data
+        state.isInitialized = initialState.isInitialized
+      }
+    })
 
     builder.addCase(resetState.fulfilled, (state) => {
       state.data = initialState.data

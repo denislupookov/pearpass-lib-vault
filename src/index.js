@@ -20,12 +20,12 @@ export { VaultProvider } from './store'
 export { closeAllInstances } from './api/closeAllInstances'
 export {
   setPearpassVaultClient,
+  setCurrentDeviceName,
   setStoragePath
 } from './instances'
 
-export { queueAction } from './api/queueAction'
 export { broadcastAction } from './api/broadcastAction'
-export { processPendingActions } from './api/processPendingActions'
+export { broadcastDeleteVault } from './api/broadcastDeleteVault'
 export { runActionScan } from './api/actionRunner'
 export { getMyDeviceId } from './utils/getMyDeviceId'
 

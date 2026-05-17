@@ -80,6 +80,13 @@ jest.mock('../actions/addDevice', () => ({
     rejected: { type: 'addDevice/rejected' }
   }
 }))
+jest.mock('../actions/deleteVaultLocal', () => ({
+  deleteVaultLocal: {
+    pending: { type: 'deleteVaultLocal/pending' },
+    fulfilled: { type: 'deleteVaultLocal/fulfilled' },
+    rejected: { type: 'deleteVaultLocal/rejected' }
+  }
+}))
 jest.mock('../utils/logger', () => ({
   logger: {
     error: jest.fn()

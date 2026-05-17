@@ -3,6 +3,7 @@ import { useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
 import { addDevice as addDeviceAction } from '../actions/addDevice.js'
+import { deleteVaultLocal as deleteVaultLocalAction } from '../actions/deleteVaultLocal'
 import { getVaultById } from '../actions/getVaultById'
 import { getVaults } from '../actions/getVaults'
 import { resetState as resetStateAction } from '../actions/resetState'
@@ -52,6 +53,7 @@ import { logger } from '../utils/logger'
  *          currentPassword: string
  *        }) => Promise<void>
  *      syncVault: () => Promise<boolean>
+ *      deleteVaultLocal: (vaultId: string) => Promise<Array<any>>
  *  }}
  */
 export const useVault = ({ variables } = {}) => {
@@ -88,11 +90,15 @@ export const useVault = ({ variables } = {}) => {
         if (current) {
           dispatch(getVaultById({ vaultId: current.id }))
         }
-        runActionScan().catch((err) => logger.error('runActionScan failed', { err }))
+        runActionScan().catch((err) =>
+          logger.error('runActionScan failed', { err })
+        )
       }
     })
 
-    runActionScan().catch((err) => logger.error('runActionScan failed', { err }))
+    runActionScan().catch((err) =>
+      logger.error('runActionScan failed', { err })
+    )
 
     return vault
   }
@@ -178,6 +184,20 @@ export const useVault = ({ variables } = {}) => {
     dispatch(resetStateAction())
   }
 
+  const deleteVaultLocal = async (vaultId) => {
+    if (!vaultId) {
+      throw new Error('vaultId is required')
+    }
+
+    const action = await dispatch(deleteVaultLocalAction({ vaultId }))
+
+    if (action.error) {
+      throw new Error(action.error.message || 'Error deleting vault locally')
+    }
+
+    return action.payload.remainingVaults
+  }
+
   return {
     isLoading,
     data,
@@ -188,6 +208,7 @@ export const useVault = ({ variables } = {}) => {
     resetState,
     updateUnprotectedVault,
     updateProtectedVault,
-    syncVault
+    syncVault,
+    deleteVaultLocal
   }
 }

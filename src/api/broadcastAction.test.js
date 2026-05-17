@@ -11,11 +11,15 @@ jest.mock('../actions', () => ({
   ACTION_TYPES: { LOGOUT: 'logout', DELETE_VAULT: 'delete-vault' }
 }))
 
+jest.mock('./actionRunner', () => ({
+  runActionScan: jest.fn().mockResolvedValue(undefined)
+}))
+
 describe('broadcastAction', () => {
   beforeEach(() => {
     pearpassVaultClient.activeVaultGetWriterKey.mockReset()
     pearpassVaultClient.activeVaultList.mockReset()
-    pearpassVaultClient.activeVaultAdd.mockReset()
+    pearpassVaultClient.vaultsAdd.mockReset()
 
     pearpassVaultClient.activeVaultGetWriterKey.mockResolvedValue('w-aaa')
   })
@@ -36,7 +40,7 @@ describe('broadcastAction', () => {
     )
   })
 
-  it('queues one entry per device, excluding self', async () => {
+  it('queues an outbox entry per peer, excluding self', async () => {
     pearpassVaultClient.activeVaultList.mockResolvedValue([
       { id: 'AAA', name: 'ios 18.0', writerKey: 'w-aaa' },
       { id: 'BBB', name: 'macos 15.0', writerKey: 'w-bbb' },
@@ -49,21 +53,15 @@ describe('broadcastAction', () => {
     })
 
     expect(failures).toEqual([])
-    expect(results).toHaveLength(2)
-    const targets = results.map((r) => r.targetDeviceId).sort()
-    expect(targets).toEqual(['BBB', 'CCC'])
-
-    expect(pearpassVaultClient.activeVaultAdd).toHaveBeenCalledTimes(2)
-    for (const call of pearpassVaultClient.activeVaultAdd.mock.calls) {
-      const [key, body] = call
-      expect(key.startsWith('actions/queue/')).toBe(true)
-      expect(body.type).toBe('delete-vault')
-      expect(body.actor).toBe('AAA')
-      expect(body.payload).toEqual({ reason: 'manual' })
+    expect(results.map((r) => r.targetDeviceId).sort()).toEqual(['BBB', 'CCC'])
+    expect(results.every((r) => r.channel === 'outbox')).toBe(true)
+    expect(pearpassVaultClient.vaultsAdd).toHaveBeenCalledTimes(2)
+    for (const [key] of pearpassVaultClient.vaultsAdd.mock.calls) {
+      expect(key.startsWith('actions/outbox/')).toBe(true)
     }
   })
 
-  it('returns empty results and failures when only self is paired', async () => {
+  it('returns empty results when only self is paired', async () => {
     pearpassVaultClient.activeVaultList.mockResolvedValue([
       { id: 'AAA', name: 'ios 18.0', writerKey: 'w-aaa' }
     ])
@@ -72,7 +70,7 @@ describe('broadcastAction', () => {
 
     expect(results).toEqual([])
     expect(failures).toEqual([])
-    expect(pearpassVaultClient.activeVaultAdd).not.toHaveBeenCalled()
+    expect(pearpassVaultClient.vaultsAdd).not.toHaveBeenCalled()
   })
 
   it('reports partial failures without aborting other targets', async () => {
@@ -83,7 +81,7 @@ describe('broadcastAction', () => {
     ])
 
     const boom = new Error('write failed')
-    pearpassVaultClient.activeVaultAdd.mockImplementation((key) => {
+    pearpassVaultClient.vaultsAdd.mockImplementation((key) => {
       if (key.includes('/BBB/')) return Promise.reject(boom)
       return Promise.resolve()
     })
@@ -92,6 +90,6 @@ describe('broadcastAction', () => {
 
     expect(results.map((r) => r.targetDeviceId)).toEqual(['CCC'])
     expect(failures).toEqual([{ targetDeviceId: 'BBB', error: boom }])
-    expect(pearpassVaultClient.activeVaultAdd).toHaveBeenCalledTimes(2)
+    expect(pearpassVaultClient.vaultsAdd).toHaveBeenCalledTimes(2)
   })
 })

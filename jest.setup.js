@@ -19,6 +19,7 @@ const mockClient = {
   activeVaultDeleteInvite: jest.fn(),
   activeVaultAdd: jest.fn(),
   vaultsAdd: jest.fn(),
+  removeVault: jest.fn(),
   activeVaultInit: jest.fn(),
   activeVaultRemove: jest.fn(),
   encryptionInit: jest.fn(),
@@ -37,7 +38,19 @@ const mockClient = {
   generateHotpNext: jest.fn(),
   generateOtpCodesByIds: jest.fn(),
   activeVaultFind: jest.fn(),
-  activeVaultGetWriterKey: jest.fn().mockResolvedValue('writer-key-hex')
+  activeVaultGetWriterKey: jest.fn().mockResolvedValue('writer-key-hex'),
+  vaultsGet: jest.fn(),
+  vaultsRemove: jest.fn(),
+  vaultsFind: jest.fn(),
+  signMessage: jest.fn(),
+  verifySignature: jest.fn(),
+  personalSwarmInit: jest.fn(),
+  personalSwarmClose: jest.fn(),
+  personalSwarmGetTopic: jest.fn(),
+  personalSwarmSend: jest.fn(),
+  emit: jest.fn(),
+  off: jest.fn(),
+  listenerCount: jest.fn().mockReturnValue(0)
 }
 
 setPearpassVaultClient(mockClient, { currentDeviceName: null })

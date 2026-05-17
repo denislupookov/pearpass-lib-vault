@@ -1,12 +1,11 @@
-import { processPendingActions } from './processPendingActions'
+import { processInbox } from './inbox'
+import { processOutbox } from './outbox'
 import { logger } from '../utils/logger'
 
 let isProcessing = false
 let pendingRescan = false
 
-/**
- * @returns {Promise<void>}
- */
+/** @returns {Promise<void>} */
 export const runActionScan = async () => {
   if (isProcessing) {
     pendingRescan = true
@@ -17,10 +16,17 @@ export const runActionScan = async () => {
   try {
     do {
       pendingRescan = false
+
       try {
-        await processPendingActions()
+        await processInbox()
       } catch (err) {
-        logger.error('runActionScan: processPendingActions failed', err)
+        logger.error('runActionScan: processInbox failed', err)
+      }
+
+      try {
+        await processOutbox()
+      } catch (err) {
+        logger.error('runActionScan: processOutbox failed', err)
       }
     } while (pendingRescan)
   } finally {

@@ -1,12 +1,9 @@
 import { createAsyncThunk } from '@reduxjs/toolkit'
 
 import { addDevice as addDeviceApi } from '../api/addDevice'
+import { getCurrentDeviceName, pearpassVaultClient } from '../instances'
 import { addDeviceFactory } from '../utils/addDeviceFactory'
 import { logger } from '../utils/logger'
-import {
-  getCurrentDeviceName,
-  pearpassVaultClient
-} from '../instances'
 
 export const addDevice = createAsyncThunk(
   'vault/addDevice',
@@ -17,22 +14,40 @@ export const addDevice = createAsyncThunk(
     const existingDevices = vaultState.data?.devices ?? []
 
     const deviceName = getCurrentDeviceName()
+    const writerKey = await pearpassVaultClient.activeVaultGetWriterKey()
+    const masterTopic = await safeGetPersonalSwarmTopic()
 
     const existingDevice = existingDevices.find(
-      (device) => device.name === deviceName
+      (device) => device.writerKey === writerKey
     )
 
-    if (existingDevice) {
+    if (existingDevice && existingDevice.masterTopic === masterTopic) {
       logger.log('Device already added to vault')
       return existingDevice
     }
 
-    const writerKey = await pearpassVaultClient.activeVaultGetWriterKey()
+    const base = existingDevice
+      ? { ...existingDevice, createdAt: Date.now() }
+      : addDeviceFactory(deviceName, vaultId, writerKey, masterTopic)
 
-    const newDevice = addDeviceFactory(deviceName, vaultId, writerKey)
+    const device = { ...base }
+    if (masterTopic) device.masterTopic = masterTopic
+    else delete device.masterTopic
 
-    await addDeviceApi(newDevice)
+    await addDeviceApi(device)
 
-    return newDevice
+    return device
   }
 )
+
+const safeGetPersonalSwarmTopic = async () => {
+  try {
+    if (typeof pearpassVaultClient?.personalSwarmGetTopic !== 'function') {
+      return null
+    }
+    return (await pearpassVaultClient.personalSwarmGetTopic()) || null
+  } catch (err) {
+    logger.error('addDevice: personalSwarmGetTopic failed', { err })
+    return null
+  }
+}
